@@ -69,6 +69,10 @@ class SetAttr():
         extra = self.eic if instance.closed else self.eio
         n = instance.n + extra
 
+        # Specified as a constant
+        if value.ndim == 0:
+            value = np.full((n, self.elem), value)
+
         if value.shape == (self.elem,):
             value = np.tile(value, (n, 1))
 
@@ -567,6 +571,8 @@ class Path:
             #  the tangent along the 0-axis.
             T2 = path_tangents(verts, closed=self.closed)
             VN = norm(cross(T1, T2)).reshape(-1, 3)
+        else:
+            VN = None
 
         verts = verts.reshape(-1, 3)
 

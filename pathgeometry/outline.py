@@ -107,7 +107,7 @@ class Outline:
         self.dtype = dtype
 
         if T is True:
-            T = path_tangents(self.outline, closed=True)
+            self.T = path_tangents(self.outline, closed=True)
         elif isinstance(T, (list, tuple, np.ndarray)):
             self.T = norm(np.asarray(T, dtype))
 
@@ -121,7 +121,7 @@ class Outline:
         else:
             self.end_stitch = np.asarray(end_stitch, dtype='i')
 
-        if self.color is not None:
+        if color is not None:
             self.color = color
 
 
