@@ -25,7 +25,7 @@ N = 200
 a = 0.25
 R = 1
 
-ϕ = np.linspace(0, 2*π, N)
+ϕ = np.linspace(0, 2*π, N, False)
 
 r = R + a * np.cos(q * ϕ)
 z = a * np.sin(q * ϕ)
@@ -35,7 +35,7 @@ X[:, 0] = r * np.cos(p * ϕ)
 X[:, 1] = r * np.sin(p * ϕ)
 X[:, 2] = z
 
-path = pathgeometry.Path(X)
+path = pathgeometry.Path(X, closed=True)
 path.a = 0.05 # Tube radius, here constant, but can also vary!
 path.colorize(path.X[:, 2], cmap='RdBu') # Color by z coordinate
 
