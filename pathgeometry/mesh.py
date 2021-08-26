@@ -293,8 +293,10 @@ class Mesh(object):
             * If type is array, it should have the same length as the number of points,
               and it will be converted to a colormap.
 
-        cmap : string or matplotlib colormap (default: 'jet')
-            The color map to use.  Only relevant if ``c`` is an array.
+        cmap : string or matplotlib colormap
+            The color map to use.  Only relevant if ``c`` is an array.  If none
+            is specified, use default colormap ('viridis' in recent versions of
+            Matplotlib).
         clim : tuple (default: None)
             The color limits.  If None, the max/min of c are used.
         '''
@@ -964,7 +966,7 @@ PY_TYPE = lambda x: float if x in ('f', 'd') else int
 
 
 NP_PLY = {}
-for k, v in PLY_PROPERTY_TYPES.items(): NP_PLY[np.dtype(v)] = k
+for k, v in PLY_PROPERTY_TYPES.items(): NP_PLY[np.dtype(v)] = k.encode('utf-8')
 
 
 def decode_ply(f, require_triangles=True):
