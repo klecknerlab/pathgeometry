@@ -35,11 +35,6 @@ from .vector import dot, norm, mag, cross, enforce_shape
 class MeshWarning(Warning):
     pass
 
-
-class ToDoError(Exception):
-    pass
-
-
 #------------------------------------------------------------------------------
 # Utility functions for Mesh
 #------------------------------------------------------------------------------
@@ -57,8 +52,20 @@ def colors_astype(c, dtype):
 
 
 #------------------------------------------------------------------------------
+# Mapping from u1 sRGB to linear values
+#------------------------------------------------------------------------------
+
+SRGB_TO_LINEAR = np.concatenate([
+    np.arange(11, dtype='f') / (255 * 12.92),
+    ((np.arange(11, 256, dtype='f') / 255 + 0.055) / (1 + 0.055))**2.4
+])
+
+
+#------------------------------------------------------------------------------
 # Main Mesh Class
 #------------------------------------------------------------------------------
+
+
 
 class Mesh(object):
     '''3D triangular mesh object.
@@ -433,12 +440,10 @@ class Mesh(object):
 
         else: raise TypeError('can only add a Mesh to another Mesh')
 
-
     def __add__(self, other):
         m = self.copy()
         m += other
         return m
-
 
     def euler_char(self):
         '''Return the *total* Euler Characteristic of a mesh: :math:`\chi = V - E + F`.
@@ -773,12 +778,29 @@ class Mesh(object):
         else:
             return Mesh(**kw)
 
-
     def remove_degenerate_triangles(self):
         '''Remove triangles with repeated edges.'''
 
         self.triangles = self.triangles[
             np.where((self.triangles != np.roll(self.triangles, 1, axis=-1)).all(-1))]
+
+    def ensure_linear_colors(self, drop_alpha=True):
+        '''If the colors are encoded as unsigned bytes, they will be converted
+        to linear scale floats.  The routine assumes the bytes are encoded
+        as sRGB, while float values are linear.  (This is generally the case!)
+
+        Parameters
+        ----------
+        drop_alpha : bool (default: True)
+            If specified, the alpha channel is also dropped (if present)
+        '''
+
+        if drop_alpha:
+            self.colors = self.colors[:, :3]
+
+        if self.colors.dtype == 'u1':
+            self.colors = SRGB_TO_LINEAR[self.colors]
+
 
 
 #------------------------------------------------------------------------------
@@ -898,7 +920,7 @@ def load_mesh(fn, file_type=None):
 
     elif file_type.lower() == 'stl':
         with open(fn, 'rb') as f:
-            if f.read(5).lower() == 'solid':
+            if f.read(5).lower() == b'solid':
                 raise ValueError("ASCII STL reading not implemented!")
 
             f.seek(80)
@@ -932,10 +954,10 @@ PLY_PROPERTY_LIST = re.compile(r'property\s+list\s+(\w+)\s+(\w+)\s+(\w+)')
 
 PLY_PROPERTY = re.compile(r'property\s+(\w+)\s+(\w+)')
 PLY_PROPERTY_TYPES = {
-    b'char':'i1', b'uchar':'u1',
-    b'short':'i2', b'ushort':'u2',
-    b'int':'i4', b'uint':'u4',
-    b'float':'f', b'double':'d'
+    'char':'i1', 'uchar':'u1',
+    'short':'i2', 'ushort':'u2',
+    'int':'i4', 'uint':'u4',
+    'float':'f', 'double':'d'
 }
 
 PY_TYPE = lambda x: float if x in ('f', 'd') else int
@@ -982,7 +1004,7 @@ def decode_ply(f, require_triangles=True):
     if type(f) is str:
         f = open(f, 'rb')
 
-    line = f.readline().strip()
+    line = f.readline().strip().decode('utf-8')
 
     if line != 'ply':
         raise PLYError('First line of file %s is not "ply", this file is not a PLY mesh!\n[%s]' % (repr(f), line))
@@ -997,7 +1019,7 @@ def decode_ply(f, require_triangles=True):
     current_element = None
 
     while line != 'end_header':
-        line = f.readline()
+        line = f.readline().decode('utf-8')
 
         if not line.endswith('\n'):
             raise PLYError('reached end of file (%s) before end of header; invalid file.' % repr(f))
@@ -1071,13 +1093,10 @@ def decode_ply(f, require_triangles=True):
         et = element_info[e]
 
         ne = et.pop(0)
-        #print e, et
-
         fast_decode = True
 
         dtype_list = []
         py_types = []
-
 
         if e == 'face' and len(et) == 1 and et[0][0] == 'vertex_indices' and require_triangles:
             #This mesh only has vertex indices AND we have require_triangles = True
@@ -1099,13 +1118,12 @@ def decode_ply(f, require_triangles=True):
 
         if fast_decode:
             if format_type == 'ascii':
-                s = ''.join(f.readline() for n in range(ne))
+                s = ''.join(f.readline().decode('utf-8') for n in range(ne))
                 dat = np.genfromtxt(StringIO(s), dtype=dtype)
             else:
                 dat = np.fromfile(f, dtype=dtype, count=ne)
 
         else:
-
             def conv(t, x):
                 try: return t(x)
                 except: raise PLYError('expected %s, found "%s" (in file %s)' % (t, x, repr(f)))
@@ -1113,7 +1131,7 @@ def decode_ply(f, require_triangles=True):
             def get(t, count=1):
                 t = np.dtype(t)
                 n = t.itemsize*count
-                s = f.read(n)
+                s = f.read(n).decode('utf-8')
                 if len(s) != n:
                     raise PLYEror('reached end of file %s before all data was read' % repr(f))
                 return np.fromstring(s, t, count=count)
@@ -1122,7 +1140,7 @@ def decode_ply(f, require_triangles=True):
 
             for i in range(ne):
                 if format_type == 'ascii':
-                    parts = f.readline().split()
+                    parts = f.readline().decode('utf-8').split()
 
                     for name, t in py_types:
                         if not parts:
@@ -1145,14 +1163,12 @@ def decode_ply(f, require_triangles=True):
                         else:
                             dat[name][i] = get(t)
 
-
         if fast_triangles and e == 'face':
             if (dat['nv'] != 3).any():
                 raise PLYError("require_triangles=True, but file contains non-triangular faces")
             element_data[e] = {'vertex_indices':dat['v']}
         else:
             element_data[e] = dict((name, dat[name]) for name, t in et)
-
 
     if require_triangles:
         if not fast_triangles:

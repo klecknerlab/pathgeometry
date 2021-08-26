@@ -36,5 +36,6 @@ path.twist(path.t[:path.n] * 2)
 
 # Set the thickness of the line.
 path.a = 0.1 * (1.5 + np.cos(9*path.t[:path.n]))
+path.colorize(np.cos(path.s))
 
 path.extrude(outline='striped').save('test.ply')
