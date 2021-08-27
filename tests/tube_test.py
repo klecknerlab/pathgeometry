@@ -39,3 +39,12 @@ path.a = 0.1 * (1.5 + np.cos(9*path.t[:path.n]))
 path.colorize(np.cos(path.s))
 
 path.extrude(outline='striped').save('test.ply')
+
+path2 = pathgeometry.torus_knot(a=0.2, N=200)
+path2.a = 0.01
+path2.colorize('b')
+
+path.a = 0.01
+path.colorize('r')
+
+(path.extrude() + path2.extrude()).save('test2.ply')

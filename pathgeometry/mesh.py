@@ -414,7 +414,11 @@ class Mesh(object):
                 self.colors[mc.shape[0]:, :oc.shape[1]] = oc
 
 
-            for prop in set(['normals'] + self.attached.keys() + other.attached.keys()):
+            props = {'normals'}
+            props.update(self.attached.keys())
+            props.update(other.attached.keys())
+
+            for prop in props:
                 p1 = getattr(self, prop, None)
                 p2 = getattr(other, prop, None)
 

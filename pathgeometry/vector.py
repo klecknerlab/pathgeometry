@@ -90,6 +90,7 @@ def proj(X, Y):
     Yp = norm(Y)
     return dot1(Yp, X) * Yp
 
+
 def midpoint_delta(X):
     '''Returns center point and vector of each edge of the polygon defined by the points.'''
     Xp = plus(X)
@@ -100,7 +101,7 @@ def arb_perp(V):
     '''For each vector, return an arbitrary unit vector that is perpendicular.
 
     **Note: arbitrary does not mean random!**'''
-    p = eye(3, dtype=V.dtype)[argmin(V, -1)]
+    p = np.eye(3, dtype=V.dtype)[np.argmin(V, -1)]
     return norm(p - proj(p, V))
 
 
